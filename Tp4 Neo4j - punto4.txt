@@ -1,0 +1,117 @@
+CREATE (e1:Estudiante {id: 1, nombre: "Ana Pérez"})
+CREATE (e2:Estudiante {id: 2, nombre: "Luis Gómez"})
+CREATE (e3:Estudiante {id: 3, nombre: "Sofía Ramírez"})
+
+
+CREATE (m1:Materia {codigo: "MAT101", nombre: "Matemáticas I"})
+CREATE (m2:Materia {codigo: "FIS101", nombre: "Física I"})
+CREATE (m3:Materia {codigo: "MAT201", nombre: "Matemáticas II"})
+
+
+CREATE (m3)-[:REQUISITO]->(m1)
+
+CREATE (c1:Curso {id: "C1", año: 2024, semestre: 1})
+CREATE (c2:Curso {id: "C2", año: 2024, semestre: 1})
+CREATE (c3:Curso {id: "C3", año: 2024, semestre: 2})
+CREATE (c4:Curso {id: "C4", año: 2025, semestre: 1})
+
+
+CREATE (c1)-[:CORRESPONDE_A]->(m1)
+CREATE (c2)-[:CORRESPONDE_A]->(m2)
+CREATE (c3)-[:CORRESPONDE_A]->(m1)
+CREATE (c4)-[:CORRESPONDE_A]->(m3)
+
+
+CREATE (e1)-[:INSCRITO_EN {calificacion: 8}]->(c1)
+CREATE (e1)-[:INSCRITO_EN {calificacion: 7}]->(c2)
+CREATE (e1)-[:INSCRITO_EN {calificacion: 9}]->(c4)
+
+CREATE (e2)-[:INSCRITO_EN {calificacion: 6}]->(c1)
+CREATE (e2)-[:INSCRITO_EN {calificacion: 5}]->(c2)
+
+CREATE (e3)-[:INSCRITO_EN {calificacion: 9}]->(c3)
+CREATE (e3)-[:INSCRITO_EN {calificacion: 7}]->(c4)
+
+
+Consulta 1:Transcripción académica de un estudiante (por nombre)
+
+	MATCH (e:Estudiante {nombre: "Ana Pérez"})-[r:INSCRITO_EN]->(c:Curso)-[:CORRESPONDE_A]->(m:Materia)
+	RETURN 
+	  e.nombre AS Estudiante, 
+	  m.nombre AS Materia, 
+	  c.año AS Año, 
+	  c.semestre AS Semestre,
+	  c.id AS CursoID,
+	  r.calificacion AS Calificacion
+	ORDER BY c.año, c.semestre
+
+	Resultados:
+
+		Estudiantes:"Ana Pérez"
+		Materias:"Matemáticas I"
+		Año: 2024
+		Semestre: 1
+		CursoID: "C1"
+		Calificacion: 8
+
+		Estudiantes:"Ana Pérez"
+		Materias:"Física I"
+		Año: 2024
+		Semestre: 1
+		CursoID: "C2"
+		Calificacion: 7
+
+		Estudiantes:"Ana Pérez"
+		Materias:"Matemáticas II"
+		Año: 2025
+		Semestre: 1
+		CursoID: "C4"
+		Calificacion: 9
+
+Consulta 2:  Verificar si un estudiante puede inscribirse en una materia (por nombre)
+
+	WITH "Sofía Ramírez" AS estudianteNombre, "MAT201" AS materiaCodigo
+	MATCH (e:Estudiante {nombre: estudianteNombre})
+	WITH e, materiaCodigo
+	MATCH (m:Materia {codigo: materiaCodigo})
+	OPTIONAL MATCH (m)-[:REQUISITO]->(req:Materia)<-[:CORRESPONDE_A]-(c:Curso)<-[r:INSCRITO_EN]-(e)
+	WITH e, m, collect(r.calificacion >= 7) AS requisitos_aprobados, count(req) AS total_req
+	RETURN m.nombre AS Materia, 
+	       CASE 
+	           WHEN total_req = 0 THEN "Puede inscribirse (sin requisitos)"
+	           WHEN all(x IN requisitos_aprobados WHERE x = true) THEN "Puede inscribirse"
+	           ELSE "No puede inscribirse (no aprobó todos los requisitos)"
+	       END AS Estado
+
+	Resultados: 
+
+		Materia:"Matemáticas II"
+		Estado:"Puede inscribirse"
+
+Consulta 3: Calcular el promedio de calificaciones por estudiante
+
+	MATCH (e:Estudiante)-[r:INSCRITO_EN]->(c:Curso)
+	RETURN e.nombre AS Estudiante, round(avg(r.calificacion), 2) AS Promedio
+
+	Resultados:
+
+		Estudiante:"Ana Pérez"
+		Promedio: 8.0
+
+		Estudiante:"Luis Gómez"
+		Promedio: 8.0
+
+		Estudiante:"Sofía Ramírez"
+		Promedio: 5.5
+
+Consulta 4: Detectar materias con promedio inferior a 7
+
+	MATCH (e:Estudiante)-[r:INSCRITO_EN]->(c:Curso)-[:CORRESPONDE_A]->(m:Materia)
+	WITH m.nombre AS Materia, avg(r.calificacion) AS Promedio
+	WHERE Promedio < 7
+	RETURN Materia, round(Promedio, 2) AS Promedio
+	ORDER BY Promedio ASC
+
+	Resultado:
+		Materia: "Física I"
+		Promeido: 6.0

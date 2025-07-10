@@ -1,0 +1,111 @@
+CREATE (u1:User {id: 1, name: "Ana"})
+CREATE (u2:User {id: 2, name: "Luis"})
+CREATE (u3:User {id: 3, name: "Marta"})
+CREATE (u4:User {id: 4, name: "Carlos"})
+
+CREATE (u1)-[:CONOCE]->(u2)
+CREATE (u2)-[:CONOCE]->(u1)
+CREATE (u1)-[:CONOCE]->(u3)
+CREATE (u3)-[:CONOCE]->(u1)
+CREATE (u2)-[:CONOCE]->(u4)
+CREATE (u4)-[:CONOCE]->(u2)
+CREATE (u3)-[:CONOCE]->(u4)
+CREATE (u4)-[:CONOCE]->(u3)
+
+CREATE (p1:Post {id: 101, content: "Mi primer post", date: date("2025-07-01")})<-[:PUBLICA]-(u1)
+CREATE (p2:Post {id: 102, content: "Aprendiendo Neo4j", date: date("2025-07-05")})<-[:PUBLICA]-(u2)
+CREATE (p3:Post {id: 103, content: "Tips de programación", date: date("2025-07-07")})<-[:PUBLICA]-(u2)
+
+CREATE (h1:Skill {name: "Java"})
+CREATE (h2:Skill {name: "Python"})
+CREATE (h3:Skill {name: "Graph Databases"})
+CREATE (h4:Skill {name: "Project Management"})
+CREATE (h5:Skill {name: "Communication"})
+CREATE (h6:Skill {name: "Data Analysis"})
+
+CREATE (u1)-[:TIENE_HABILIDAD]->(h1)
+CREATE (u1)-[:TIENE_HABILIDAD]->(h5)
+
+CREATE (u2)-[:TIENE_HABILIDAD]->(h2)
+CREATE (u2)-[:TIENE_HABILIDAD]->(h3)
+
+CREATE (u3)-[:TIENE_HABILIDAD]->(h4)
+CREATE (u3)-[:TIENE_HABILIDAD]->(h6)
+
+CREATE (u4)-[:TIENE_HABILIDAD]->(h1)
+CREATE (u4)-[:TIENE_HABILIDAD]->(h6)
+
+CREATE (u2)-[:ENDOSA]->(h1)  // Luis endosa Java
+CREATE (u3)-[:ENDOSA]->(h1)  // Marta endosa Java
+CREATE (u1)-[:ENDOSA]->(h2)  // Ana endosa Python
+CREATE (u4)-[:ENDOSA]->(h2)  // Carlos endosa Python
+CREATE (u1)-[:ENDOSA]->(h4)  // Ana endosa Project Management
+CREATE (u2)-[:ENDOSA]->(h6)  // Luis endosa Data Analysis
+
+
+Consutla 1: Listar usuarios con más conexiones (COUNT)
+	
+	MATCH (u:User)-[:CONOCE]->()
+	RETURN u.name AS Usuario, COUNT() AS CantidadConexiones
+	ORDER BY CantidadConexiones DESC
+
+	Resultados:
+		Usuario:"Ana"
+		CantidadConexiones: 2
+
+		Usuario:"Luis"
+		CantidadConexiones: 2
+
+		Usuario:"Marta"
+		CantidadConexiones: 2
+
+		Usuario:"Carlos"
+		CantidadConexiones: 2
+
+
+Consulta 2: Obtener los 2 usuarios con más publicaciones
+
+	MATCH (u:User)-[:PUBLICA]->(p:Post)
+	RETURN u.name AS Usuario, COUNT(p) AS CantidadPosts
+	ORDER BY CantidadPosts DESC
+	LIMIT 2
+	
+	Resultados:
+		Usuario:"Luis"
+		CantidadPosts: 2
+
+		Usuario:"Ana"
+		CantidadPosts: 1
+
+
+Consulta 3: Mostrar las habilidades más endosadas en total
+
+	MATCH (:User)-[:ENDOSA]->(h:Skill)
+	RETURN h.name AS Habilidad, COUNT(*) AS Endosos
+	ORDER BY Endosos DESC
+
+	Resultados:
+		Habilidad:"Python"
+		Endosos: 2
+
+		Habilidad:"Java"
+		Endosos: 2
+
+		Habilidad:"Project Management"
+		Endosos: 1
+
+		Habilidad:"Data Analysis"
+		Endosos: 1	
+
+Consultas 4: Para un usuario específico (ejemplo: Ana), listar habilidades que NO ha endosado a otros
+
+	MATCH (ana:User {name:"Ana"})
+	MATCH (h:Skill)
+	WHERE NOT (ana)-[:ENDOSA]->(h)
+	RETURN h.name AS HabilidadesNoEndosadas
+
+	Resultados: 
+		HabilidadesNoEndosadas: "Graph Databases"
+		HabilidadesNoEndosadas: "Communication"
+		HabilidadesNoEndosadas: "Data Analysis"
+		HabilidadesNoEndosadas: "Java"

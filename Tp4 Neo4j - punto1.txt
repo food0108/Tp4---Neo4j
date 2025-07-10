@@ -1,0 +1,72 @@
+
+CREATE (e1:Empleado {nombre: "Ana", id: 1})
+CREATE (e2:Empleado {nombre: "Luis", id: 2})
+CREATE (e3:Empleado {nombre: "Carlos", id: 3})
+
+CREATE (d1:Departamento {nombre: "Finanzas"})
+CREATE (d2:Departamento {nombre: "TI"})
+CREATE (d3:Departamento {nombre: "Marketing"})
+
+CREATE (e1)-[:PERTENECE_A]->(d1)
+CREATE (e2)-[:PERTENECE_A]->(d2)
+CREATE (e3)-[:PERTENECE_A]->(d3)
+
+CREATE (p1:Proyecto {nombre: "Proyecto A", id: "PA"})
+CREATE (p2:Proyecto {nombre: "Proyecto B", id: "PB"})
+
+CREATE (e1)-[:TRABAJA_EN {horas_semanales: 20}]->(p1)
+CREATE (e2)-[:TRABAJA_EN {horas_semanales: 15}]->(p1)
+CREATE (e2)-[:TRABAJA_EN {horas_semanales: 10}]->(p2)
+CREATE (e3)-[:TRABAJA_EN {horas_semanales: 25}]->(p2)
+
+CREATE (e1)-[:LIDERA]->(p1)
+CREATE (e3)-[:LIDERA]->(p2)
+
+
+Consulta 1: Obtener el nombre del proyecto, su líder y los empleados asignados:
+
+	MATCH (e:Empleado)-[:LIDERA]->(p:Proyecto)
+	OPTIONAL MATCH (emp:Empleado)-[r:TRABAJA_EN]->(p)
+	RETURN p.nombre AS Proyecto,
+       		e.nombre AS Lider,
+       		collect(emp.nombre) AS Empleados_Asignados
+
+	Resultado:
+		Proyecto: "Proyecto A"
+		Lider: "Ana"
+		Empleados_Asignados: ["Ana", "Luis"]
+
+		Proyecto: "Proyecto B"
+		Lider: "Carlos"
+		Empleados_Asignados: ["Luis", "Carlos"]
+
+Consulta 2: Calcular el total de horas semanales por proyecto:
+	
+	MATCH (e:Empleado)-[t:TRABAJA_EN]->(p:Proyecto)
+	RETURN p.nombre AS Proyecto,
+       		SUM(t.horas_semanales) AS Total_Horas_Semanales
+
+	Resultado:
+		Proyecto: "Proyecto A"
+		Total_Horas_Semanales: 35
+		
+		Proyecto: "Proyecto B"
+		Total_Horas_Semanales: 35
+
+Consulta 3: Listar los empleados que trabajan en más de un proyecto:
+
+	MATCH (e:Empleado)-[:TRABAJA_EN]->(p:Proyecto)
+	WITH e, COUNT(DISTINCT p) AS proyectos
+	WHERE proyectos > 1
+	RETURN e.nombre AS Empleado, proyectos AS Num_Proyectos
+
+	Resultado:
+		Empleado:"Luis"
+		Num_Proyectos: 2
+
+
+
+
+
+
+

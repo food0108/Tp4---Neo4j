@@ -1,0 +1,73 @@
+CREATE (c1:Carrera {nombre: "Ingeniería"})
+CREATE (c2:Carrera {nombre: "Derecho"})
+CREATE (c3:Carrera {nombre: "Psicología"})
+
+CREATE (e1:Estudiante {nombre: "Ana"})-[:PERTENECE_A]->(c1)
+CREATE (e2:Estudiante {nombre: "Luis"})-[:PERTENECE_A]->(c2)
+CREATE (e3:Estudiante {nombre: "Sofía"})-[:PERTENECE_A]->(c3)
+CREATE (e4:Estudiante {nombre: "Carlos"})-[:PERTENECE_A]->(:Carrera {nombre: "Administración"})
+
+CREATE (cat1:Categoría {nombre: "Matemáticas"})
+CREATE (cat2:Categoría {nombre: "Derecho Penal"})
+CREATE (cat3:Categoría {nombre: "Psicología Clínica"})
+CREATE (cat4:Categoría {nombre: "Filosofía"})
+
+CREATE (l1:Libro {titulo: "Cálculo I"})-[:PERTENECE_A]->(cat1)
+CREATE (l2:Libro {titulo: "Código Penal"})-[:PERTENECE_A]->(cat2)
+CREATE (l3:Libro {titulo: "Psicoanálisis Hoy"})-[:PERTENECE_A]->(cat3)
+CREATE (l4:Libro {titulo: "Ética para Amador"})-[:PERTENECE_A]->(cat4)
+
+CREATE 
+(e1)-[:REALIZO]->(p1:Prestamo {fecha: date("2025-07-01"), estado: "Activo"})-[:DE_LIBRO]->(l1),
+(e2)-[:REALIZO]->(p2:Prestamo {fecha: date("2025-06-15"), estado: "Devuelto"})-[:DE_LIBRO]->(l2),
+(e3)-[:REALIZO]->(p3:Prestamo {fecha: date("2025-07-05"), estado: "Activo"})-[:DE_LIBRO]->(l3),
+(e1)-[:REALIZO]->(p4:Prestamo {fecha: date("2025-06-10"), estado: "Devuelto"})-[:DE_LIBRO]->(l4),
+(e2)-[:REALIZO]->(p5:Prestamo {fecha: date("2025-07-08"), estado: "Activo"})-[:DE_LIBRO]->(l1)
+
+Consulta 1:Libros actualmente prestados
+
+	MATCH (p:Prestamo {estado: "Activo"})-[:DE_LIBRO]->(l:Libro)
+	RETURN l.titulo AS LibroPrestado
+
+	Resultados:
+
+		LibroPrestado: "Cálculo I","Psicoanálisis Hoy","Cálculo I"
+
+Consulta 2:Cantidad de libros prestados por cada estudiante
+	
+	MATCH (e:Estudiante)-[:REALIZO]->(p:Prestamo)
+	RETURN e.nombre AS Estudiante, COUNT(p) AS CantidadPrestamos
+
+	Resultados:
+
+		Estudiante: "Ana"
+		CantidadPrestamos: 2
+
+		Estudiante: "Luis"
+		CantidadPrestamos: 2
+
+		Estudiante: "Sofía"
+		CantidadPrestamos: 1
+
+Consulta 3: Categorías con más préstamos activos
+	
+	MATCH (p:Prestamo {estado: "Activo"})-[:DE_LIBRO]->(l:Libro)-[:PERTENECE_A]->(cat:Categoría)
+	RETURN cat.nombre AS Categoria, COUNT(p) AS PrestamosActivos
+	ORDER BY PrestamosActivos DESC
+
+	Resultados:
+
+		Categoria:"Matemáticas"
+		PrestamosActivos: 2
+
+		Categoria:"Psicología Clínica"
+		PrestamosActivos: 1
+
+Consulta 4:Estudiantes sin préstamos activos
+
+	MATCH (e:Estudiante)
+	WHERE NOT (e)-[:REALIZO]->(:Prestamo {estado: "Activo"})
+	RETURN e.nombre AS EstudianteSinPrestamosActivos 
+
+	Resultados:
+		EstudianteSinPrestamosActivos:"Carlos"
